@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "CitizenReport": {
+      "title": "CitizenReport",
+      "description": "Geotagged citizen report of El Niño climate impact in Guayaquil sectors or Ecuadorian provinces.",
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "string",
+          "description": "Geographic scope of the report.",
+          "enum": ["guayaquil", "nacional"],
+          "minLength": 8,
+          "maxLength": 10
+        },
+        "zoneId": {
+          "type": "string",
+          "description": "Identifier of the Guayaquil sector or Ecuador province.",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "zoneName": {
+          "type": "string",
+          "description": "Human-readable name of the sector or province.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "category": {
+          "type": "string",
+          "description": "Type of El Niño climate impact reported.",
+          "enum": [
+            "inundacion_vial",
+            "desbordamiento",
+            "deslizamiento",
+            "alcantarillado",
+            "corte_electrico",
+            "vivienda_afectada"
+          ],
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "severity": {
+          "type": "string",
+          "description": "Severity level of the incident.",
+          "enum": ["moderada", "alta", "critica"],
+          "minLength": 4,
+          "maxLength": 12
+        },
+        "waterDepthCm": {
+          "type": "number",
+          "description": "Estimated standing water depth in centimeters (0 to 500)."
+        },
+        "affectedFamilies": {
+          "type": "number",
+          "description": "Estimated number of affected families or households (0 to 10000)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed field observation of the climate affectation.",
+          "minLength": 10,
+          "maxLength": 500
+        },
+        "reporterAlias": {
+          "type": "string",
+          "description": "Public display alias of the citizen observer (no PII).",
+          "minLength": 2,
+          "maxLength": 60
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID of the report author.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "lat": {
+          "type": "number",
+          "description": "Latitude coordinate within Ecuador bounds."
+        },
+        "lng": {
+          "type": "number",
+          "description": "Longitude coordinate within Ecuador bounds."
+        },
+        "status": {
+          "type": "string",
+          "description": "Operational mitigation workflow state.",
+          "enum": ["reportado", "en_verificacion", "en_atencion", "mitigado"],
+          "minLength": 8,
+          "maxLength": 20
+        },
+        "visibility": {
+          "type": "string",
+          "description": "Visibility control for public risk feed.",
+          "enum": ["publico", "archivado"],
+          "minLength": 7,
+          "maxLength": 12
+        },
+        "upvotes": {
+          "type": "number",
+          "description": "Community confirmation counter."
+        },
+        "adminNote": {
+          "type": "string",
+          "description": "Official JMAC-Climatyc risk response note.",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest update."
+        }
+      },
+      "required": [
+        "scope",
+        "zoneId",
+        "zoneName",
+        "category",
+        "severity",
+        "waterDepthCm",
+        "affectedFamilies",
+        "description",
+        "reporterAlias",
+        "authorId",
+        "lat",
+        "lng",
+        "status",
+        "visibility",
+        "upvotes",
+        "adminNote",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted RBAC administrator registry for JMAC-Climatyc.",
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "Assigned administrative role.",
+          "enum": ["director", "operador"],
+          "minLength": 8,
+          "maxLength": 12
+        },
+        "addedBy": {
+          "type": "string",
+          "description": "UID of the director who granted access.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of role assignment."
+        }
+      },
+      "required": ["role", "addedBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/citizen_reports/{reportId}": {
+      "schema": "CitizenReport",
+      "description": "Geotagged citizen climate affectation reports across Guayaquil sectors and Ecuador."
+    },
+    "/admins/{adminUid}": {
+      "schema": "AdminRecord",
+      "description": "Trusted administrator lookup documents for RBAC enforcement."
+    }
+  }
+}

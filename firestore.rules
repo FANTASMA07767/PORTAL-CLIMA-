@@ -1,0 +1,181 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reusable Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'lidermancoordinador2@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Blueprint Validation: CitizenReport
+    function isValidCitizenReport(data) {
+      return data.keys().hasAll([
+          'scope', 'zoneId', 'zoneName', 'category', 'severity',
+          'waterDepthCm', 'affectedFamilies', 'description', 'reporterAlias',
+          'authorId', 'lat', 'lng', 'status', 'visibility',
+          'upvotes', 'adminNote', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'scope', 'zoneId', 'zoneName', 'category', 'severity',
+          'waterDepthCm', 'affectedFamilies', 'description', 'reporterAlias',
+          'authorId', 'lat', 'lng', 'status', 'visibility',
+          'upvotes', 'adminNote', 'createdAt', 'updatedAt'
+        ]) &&
+        data.scope is string && data.scope.size() >= 8 && data.scope.size() <= 10 &&
+        (data.scope == 'guayaquil' || data.scope == 'nacional') &&
+        data.zoneId is string && data.zoneId.size() >= 2 && data.zoneId.size() <= 64 &&
+        data.zoneId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.zoneName is string && data.zoneName.size() >= 2 && data.zoneName.size() <= 80 &&
+        data.category is string && data.category.size() >= 5 && data.category.size() <= 32 &&
+        (
+          data.category == 'inundacion_vial' ||
+          data.category == 'desbordamiento' ||
+          data.category == 'deslizamiento' ||
+          data.category == 'alcantarillado' ||
+          data.category == 'corte_electrico' ||
+          data.category == 'vivienda_afectada'
+        ) &&
+        data.severity is string && data.severity.size() >= 4 && data.severity.size() <= 12 &&
+        (data.severity == 'moderada' || data.severity == 'alta' || data.severity == 'critica') &&
+        data.waterDepthCm is number && data.waterDepthCm >= 0 && data.waterDepthCm <= 500 &&
+        data.affectedFamilies is number && data.affectedFamilies >= 0 && data.affectedFamilies <= 10000 &&
+        data.description is string && data.description.size() >= 10 && data.description.size() <= 500 &&
+        data.reporterAlias is string && data.reporterAlias.size() >= 2 && data.reporterAlias.size() <= 60 &&
+        data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 &&
+        data.authorId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.lat is number && data.lat >= -6.0 && data.lat <= 2.5 &&
+        data.lng is number && data.lng >= -92.5 && data.lng <= -75.0 &&
+        data.status is string && data.status.size() >= 8 && data.status.size() <= 20 &&
+        (
+          data.status == 'reportado' ||
+          data.status == 'en_verificacion' ||
+          data.status == 'en_atencion' ||
+          data.status == 'mitigado'
+        ) &&
+        data.visibility is string && data.visibility.size() >= 7 && data.visibility.size() <= 12 &&
+        (data.visibility == 'publico' || data.visibility == 'archivado') &&
+        data.upvotes is number && data.upvotes >= 0 && data.upvotes <= 100000 &&
+        data.adminNote is string && data.adminNote.size() >= 0 && data.adminNote.size() <= 300 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // Blueprint Validation: AdminRecord
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['role', 'addedBy', 'createdAt']) &&
+        data.keys().hasOnly(['role', 'addedBy', 'createdAt']) &&
+        data.role is string && data.role.size() >= 8 && data.role.size() <= 12 &&
+        (data.role == 'director' || data.role == 'operador') &&
+        data.addedBy is string && data.addedBy.size() >= 1 && data.addedBy.size() <= 128 &&
+        data.addedBy.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.createdAt is timestamp;
+    }
+
+    // Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Collection 1: Citizen Reports
+    match /citizen_reports/{reportId} {
+      allow get: if isSignedIn() && isValidId(reportId) && (
+        existing().visibility == 'publico' ||
+        existing().authorId == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow list: if isSignedIn() && (
+        resource.data.visibility == 'publico' ||
+        resource.data.authorId == request.auth.uid
+      );
+
+      allow create: if isVerifiedUser() &&
+        isValidId(reportId) &&
+        isValidCitizenReport(incoming()) &&
+        incoming().authorId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            incoming().status == 'reportado' &&
+            incoming().visibility == 'publico' &&
+            incoming().upvotes == 0 &&
+            incoming().adminNote == ''
+          ) ||
+          isAdmin()
+        );
+
+      allow update: if isVerifiedUser() &&
+        isValidId(reportId) &&
+        isValidCitizenReport(incoming()) &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Community Upvote (+1) on non-terminal public reports
+          (
+            existing().status != 'mitigado' &&
+            existing().visibility == 'publico' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['upvotes', 'updatedAt']) &&
+            incoming().upvotes == existing().upvotes + 1
+          ) ||
+          // Action 2: Author Description Edit while still in 'reportado' state
+          (
+            existing().authorId == request.auth.uid &&
+            existing().status == 'reportado' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['description', 'severity', 'waterDepthCm', 'updatedAt'])
+          ) ||
+          // Action 3: JMAC-Climatyc Admin Triage & Mitigation Override
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'severity', 'visibility', 'adminNote', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isVerifiedUser() && isValidId(reportId) && (
+        (existing().authorId == request.auth.uid && existing().status == 'reportado') ||
+        isAdmin()
+      );
+    }
+
+    // Collection 2: Trusted RBAC Admin Registry
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (
+        request.auth.uid == adminUid ||
+        isAdmin()
+      );
+
+      allow list: if false;
+
+      allow create: if isAdmin() &&
+        isValidId(adminUid) &&
+        isValidAdminRecord(incoming()) &&
+        incoming().addedBy == request.auth.uid &&
+        incoming().createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+  }
+}

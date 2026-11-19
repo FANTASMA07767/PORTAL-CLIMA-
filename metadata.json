@@ -1,0 +1,10 @@
+{
+  "name": "JMAC-Climatyc | Monitoreo El Niño & Gestión de Riesgos",
+  "description": "Plataforma de inteligencia climática en tiempo real, reportes ciudadanos, mapas interactivos y analítica predictiva sobre el Fenómeno de El Niño en Guayaquil y Ecuador. Diseñado y administrado por José Manuel Arguello C.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
