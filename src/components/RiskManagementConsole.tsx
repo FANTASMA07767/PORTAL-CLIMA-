@@ -8,7 +8,7 @@ import {
 import { useClimatyc } from '../context/ClimatycContext';
 import { GovAlertLevel, GovEntityCode } from '../types/climate';
 
-const EMBLEM_SRC = '/src/assets/images/jmac_director_emblem_1793055546704.jpg';
+import EMBLEM_SRC from '../assets/images/jmac_director_emblem_1793055546704.jpg';
 
 const OFFICIAL_PORTALS: {
   code: GovEntityCode;

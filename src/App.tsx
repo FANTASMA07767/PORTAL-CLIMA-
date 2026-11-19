@@ -33,8 +33,7 @@ import {
   OsintReportItem,
 } from './types/climate';
 
-const GUAYAQUIL_HERO_IMG =
-  '/src/assets/images/jmac_climatyc_guayaquil_aerial_1793055543240.jpg';
+import GUAYAQUIL_HERO_IMG from './assets/images/jmac_climatyc_guayaquil_aerial_1793055543240.jpg';
 
 function formatTierText(tier: AlertTier) {
   switch (tier) {
